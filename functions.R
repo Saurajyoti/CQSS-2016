@@ -1,5 +1,6 @@
-library(dplyr)
 library(likert)
+library(plyr)
+library(dplyr)
 library(scales)
 library(psych)
 library(grid)
@@ -10,18 +11,17 @@ library(countrycode)
 library(classInt)
 library(RColorBrewer)
 library(stringr)
+library(readr)
 library(reshape2)
 
-#setwd("C:/Users/Misha/Dropbox/Projects/EM Internship/Quantitative team/2015")
-setwd("~/Dropbox/Projects/EM Internship/Quantitative team/2015")
-
-dataset <- read.csv("../Media/2015/Master_tables/bigtable.csv", na.strings = c("", " ", "No answer", "N/A", "NA", "Other (please specify)"), header = TRUE)
-dataset$X <- NULL
+dataset <- as.data.frame(read_csv("../../Media/2016/Master_tables/bigtable.csv"))
+dataset$X1 <- NULL
 dataset$B.2.2.a.If.you.feel.comfortable.describe.any.inappropriate.conduct.or.sexual.harassment.issues.you.have.witnessed.or.have.been.the.subject.of.and.the.support.you.have.received.The.answers.to.this.question.will.not.be.shared.with.Erasmus.Mundus.course._Open.Ended.Response <- NULL
 
 ### ordered levels that were used in the survey
 likert_levels <- c("Very unsatisfied", "Somewhat unsatisfied", "Somewhat satisfied", "Very satisfied")
 agree_levels <- c("Disagree", "Somewhat disagree", "Somewhat agree", "Agree")
+skill_levels <- c("Very poor", "Poor", "Fair", "Good", "Very good", "Excellent")
 
 ### questions that need to be printed out
 questions <- c('B.1.1', 'B.1.3', 'B.2.1', 'B.2.2', 'C.1', #overall program satisfaction
@@ -33,8 +33,8 @@ questions <- c('B.1.1', 'B.1.3', 'B.2.1', 'B.2.2', 'C.1', #overall program satis
 
 ### finding out courses with 10 or more respondents in the dataset
 tenormore <- dataset %>%
-  select(A.2.name.of.Erasmus.Mundus.master.course.) %>%
-  group_by(A.2.name.of.Erasmus.Mundus.master.course.) %>%
+  select(A.2..Select.the.name.of.your.Erasmus.Mundus.Joint.Master.Degree..EMJMD..) %>%
+  group_by(A.2..Select.the.name.of.your.Erasmus.Mundus.Joint.Master.Degree..EMJMD..) %>%
   summarise(respondents = n()) %>%
   filter(respondents >= 10)
 colnames(tenormore) <- c("Course", "Respondents")
@@ -42,18 +42,18 @@ colnames(tenormore) <- c("Course", "Respondents")
 ### taking only those entries further for analysis
 #dataset <- dataset[(dataset$A.2.name.of.Erasmus.Mundus.master.course. %in% tenormore$Course),]
 
-overall <- select(dataset,
-                  RespondentID_,
-                  starts_with("A."),
-                  starts_with("X."),
-                  starts_with("B."),
-                  starts_with("C."),
-                  starts_with("L."),
-                  starts_with("N"),
-                  starts_with("O"),
-                  starts_with("P"),
-                  starts_with("Q"),
-                  I.am.currently._Response)
+# overall <- select(dataset,
+#                   RespondentID,
+#                   starts_with("A."),
+#                   starts_with("X."),
+#                   starts_with("B."),
+#                   starts_with("C."),
+#                   starts_with("L."),
+#                   starts_with("N"),
+#                   starts_with("O"),
+#                   starts_with("P"),
+#                   starts_with("Q"),
+#                   I.am.currently._Response)
 
 
 # http://stackoverflow.com/questions/32136304/conditional-calculation-of-mean

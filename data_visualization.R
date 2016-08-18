@@ -1,3 +1,5 @@
+setwd("C:/Users/Misha/Dropbox/Projects/EM Internship/Quantitative team/2016")
+
 source("functions.R")
 
 ### taking only those entries further for analysis
