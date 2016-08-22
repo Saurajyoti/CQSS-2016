@@ -16,20 +16,24 @@ library(reshape2)
 
 dataset <- as.data.frame(read_csv("../../Media/2016/Master_tables/bigtable.csv"))
 dataset$X1 <- NULL
+dataset[dataset == "N/A"] <- NA
 dataset$B.2.2.a.If.you.feel.comfortable.describe.any.inappropriate.conduct.or.sexual.harassment.issues.you.have.witnessed.or.have.been.the.subject.of.and.the.support.you.have.received.The.answers.to.this.question.will.not.be.shared.with.Erasmus.Mundus.course._Open.Ended.Response <- NULL
 
 ### ordered levels that were used in the survey
 likert_levels <- c("Very unsatisfied", "Somewhat unsatisfied", "Somewhat satisfied", "Very satisfied")
-agree_levels <- c("Disagree", "Somewhat disagree", "Somewhat agree", "Agree")
+agree_levels <- c("Strongly disagree", "Somewhat_disagree", "Somewhat agree", "Strongly agree")
 skill_levels <- c("Very poor", "Poor", "Fair", "Good", "Very good", "Excellent")
 
 ### questions that need to be printed out
-questions <- c('B.1.1', 'B.1.3', 'B.2.1', 'B.2.2', 'C.1', #overall program satisfaction
-               "L.4", "L.5", "L.6", 'L.3.a', 'L.2.a', #internship/field experience
-               "N.1.1", "N.1.3", "N.2.1", "N.2.2", "N.3.1", "N.4.1", #satisfaction in first university
-               "O.1.1", "O.1.3", "O.2.1", "O.2.2", "O.3.1", "O.4.1", #satisfaction in second university
-               "P.1.1", "P.1.3", "P.2.1", "P.2.2", "P.3.1", "P.4.1", #satisfaction in third university
-               "Q.1.1", "Q.1.3", "Q.2.1", "Q.2.2", "Q.3.1", "Q.4.1") #satisfaction in fourth university
+questions <- c('B.1.1', 'B.2.1', 'B.2.2', 'C.1', #overall program satisfaction
+               'C.4.1', 'C.4.2', 'C.5.1', #level of skills + discrimination
+               'D.1.1', #internship
+               'D.2.1', 'D.2.2', 'D.3', #supervision + personal development
+               'E.2', 'E.3', 'E.4', #supervision + personal development
+               "I.1.1", "I.2.1", "I.3.1", "I.4.1", #satisfaction in first university
+               "H.1.1", "H.2.1", "H.3.1", "H.4.1", #satisfaction in second university
+               "G.1.1", "G.2.1", "G.3.1", "G.4.1", #satisfaction in third university
+               "F.1.1", "F.2.1", "F.3.1", "Q.4.1") #satisfaction in fourth university
 
 ### finding out courses with 10 or more respondents in the dataset
 tenormore <- dataset %>%
@@ -40,21 +44,7 @@ tenormore <- dataset %>%
 colnames(tenormore) <- c("Course", "Respondents")
 
 ### taking only those entries further for analysis
-#dataset <- dataset[(dataset$A.2.name.of.Erasmus.Mundus.master.course. %in% tenormore$Course),]
-
-# overall <- select(dataset,
-#                   RespondentID,
-#                   starts_with("A."),
-#                   starts_with("X."),
-#                   starts_with("B."),
-#                   starts_with("C."),
-#                   starts_with("L."),
-#                   starts_with("N"),
-#                   starts_with("O"),
-#                   starts_with("P"),
-#                   starts_with("Q"),
-#                   I.am.currently._Response)
-
+dataset <- dataset[(dataset$A.2..Select.the.name.of.your.Erasmus.Mundus.Joint.Master.Degree..EMJMD.. %in% tenormore$Course),]
 
 # http://stackoverflow.com/questions/32136304/conditional-calculation-of-mean
 # function calculates the mean only if there are 10 or more respondents to each individual question
@@ -63,7 +53,7 @@ f1 <- function(x) if(sum(!is.na(x)) >= 10) mean(as.numeric(x), na.rm=TRUE) else 
 #function calculates number of respondents (not NA)
 f2 <- function(x) sum(!is.na(x))
 
-questionprint <- function(x, dataset = overall, save = TRUE, name_of_the_question = NULL){
+questionprint <- function(x, dataset = dataset, save = TRUE, name_of_the_question = NULL){
   ### function for printing out the likert plot about each individual section of a survey. It also prints out information about 
   ### Cronbach's alpha level. Can be used further to create similar plots for each individual course.
   
@@ -82,9 +72,6 @@ questionprint <- function(x, dataset = overall, save = TRUE, name_of_the_questio
   ### Otherwise it doesn't make sense to calculate Cronbach's alpha and plot
   if (!is.null(dim(question)[2])){
     if (dim(question)[2] > 1) {
-      
-      ### calculating Cronbach's alpha. If there is an error it won't print out anything
-      #try(printing_alpha(x, question))
       
       wrap_function <- wrap_format(85) #wrap-function to print question correctly
       name_of_the_question <- wrap_function(name_of_the_question)
@@ -141,8 +128,11 @@ question_prepare <- function(x, dataset = overall){
   
   
   levels <- likert_levels # default is likert_levels
-  if (x == "L.6" || x == "L.5" || x == "L.4")
+  if (x == "C.5.1" || x == "E.4")
     levels <- agree_levels # using agree levels only for relevant questions
+  
+  if (x == "C.4.1" || x == "C.4.2")
+    levels <- skill_levels
   
   ### making sure that levels go in order they were meant to go
   for(i in seq_along(question)) {
@@ -287,7 +277,7 @@ means_prepare <- function(x){
   overall_dataset <- question_prepare(x, dataset)[[1]]
 
   #calculating means for each course and each question to create a quantile variable
-  overall_dataset <- cbind(overall_dataset, dataset$A.2.name.of.Erasmus.Mundus.master.course.)
+  overall_dataset <- cbind(overall_dataset, dataset$A.2..Select.the.name.of.your.Erasmus.Mundus.Joint.Master.Degree..EMJMD..)
   names(overall_dataset)[ncol(overall_dataset)] <- "Course.name"
   means <- overall_dataset %>%
     group_by(Course.name) %>%
@@ -547,7 +537,7 @@ plot_question <- function(question, name_of_the_question){
             legend.position = "top",
             group.order = sort(names(question))) + 
     ggtitle(name_of_the_question) + # title of the question
-    theme(text = element_text(size = 10, family = "Times New Roman"), # setting the text size of the plot
+    theme(text = element_text(size = 10), # setting the text size of the plot
           plot.margin = unit(c(0.3, 0.8, 0.3, 0), "lines"), # decreasing white space around the plot
           legend.margin = unit(0, "lines"), # deleting space around legend
           legend.key.size = unit(0.5, "lines"), # decreasing size of legend elements
@@ -568,7 +558,7 @@ prepare_university <- function(x, course_dataset){
   # returns a dataset:
   # universities with 10 or more respondents and answers to questions by respondents
   
-  questions_uni <- c("N.", "O.", "P.", "Q.") #first letters for questions about specific universities
+  questions_uni <- c("I.", "H.", "G.", "F.") #first letters for questions about specific universities
   x <- substr(x, 3, 5) #updating x to use it in a function. x in the beginning is used to make calls to functions consistent
   
   #creating four datasets to merge them leter. Name of the university is used as an ID.
