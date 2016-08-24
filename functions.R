@@ -44,7 +44,7 @@ tenormore <- dataset %>%
 colnames(tenormore) <- c("Course", "Respondents")
 
 ### taking only those entries further for analysis
-dataset <- dataset[(dataset$A.2..Select.the.name.of.your.Erasmus.Mundus.Joint.Master.Degree..EMJMD.. %in% tenormore$Course),]
+#dataset <- dataset[(dataset$A.2..Select.the.name.of.your.Erasmus.Mundus.Joint.Master.Degree..EMJMD.. %in% tenormore$Course),]
 
 # http://stackoverflow.com/questions/32136304/conditional-calculation-of-mean
 # function calculates the mean only if there are 10 or more respondents to each individual question
@@ -826,4 +826,114 @@ numberofprograms <- function(question){
                                             columnDefs = list(list(width = "190px", targets = "_all")),
                                             align = "center"
   ))
+}
+
+get.terms <- function(x, vocab) {
+  # now put the documents into the format required by the lda package:
+  
+  index <- match(x, vocab)
+  index <- index[!is.na(index)]
+  rbind(as.integer(index - 1), as.integer(rep(1, length(index))))
+}
+
+
+perform.lda <- function(question_header){
+  question <- dataset[, names(dataset)==question_header]
+  handle <- substr(question_header, 1, 6)
+  question <- question[!is.na(question)]
+  
+  
+  #based on http://cpsievert.github.io/LDAvis/reviews/reviews.html
+  question <- gsub("'", "", question)  # remove apostrophes
+  question <- gsub("[[:punct:]]", " ", question)  # replace punctuation with space
+  question <- gsub("[[:cntrl:]]", " ", question)  # replace control characters with space
+  question <- gsub("^[[:space:]]+", "", question) # remove whitespace at beginning of documents
+  question <- gsub("[[:space:]]+$", "", question) # remove whitespace at end of documents
+  question <- tolower(question)  # force to lowercase
+  
+  # tokenize on space and output as a list:
+  doc.list <- strsplit(question, "[[:space:]]+")
+  
+  # compute the table of terms:
+  term.table <- table(unlist(doc.list))
+  term.table <- sort(term.table, decreasing = TRUE)
+  
+  switch(handle, 
+         A.10.b ={
+           output.dir <- "vis/Family_relocation"
+         },
+         A.11.a = {
+           output.dir <- "vis/Disability"
+         },
+         A.11.c = {
+           output.dir <- "vis/Help_disability"
+         },
+         B.3.If = {
+           output.dir <- "vis/Harassment"
+         },
+         C.2.2. = {
+           output.dir <- "vis/Academic_satisfaction"
+         },
+         C.3.2. = {
+           output.dir <- "vis/Overall_satisfaction"
+         },
+         D.1.2. = {
+           output.dir <- "vis/Interhsnip"
+         },
+         K.2..W = {
+           output.dir <- "vis/Representatives"
+         },
+         I.1.3. = {
+           output.dir <- "vis/Orientation"
+         },
+         I.3.2. = {
+           output.dir <- "vis/Feedback"
+         }
+  )
+  
+  # remove terms that are stop words or occur fewer than 5 times:
+  del <- names(term.table) %in% stop_words | term.table < 5
+  term.table <- term.table[!del]
+  vocab <- names(term.table)
+  
+  documents <- lapply(doc.list, get.terms, vocab = vocab)  
+  
+  # Compute some statistics related to the data set:
+  D <- length(documents)  # number of documents (657)
+  W <- length(vocab)  # number of terms in the vocab (607)
+  doc.length <- sapply(documents, function(x) sum(x[2, ]))  # number of tokens per document [312, 288, 170, 436, 291, ...]
+  N <- sum(doc.length)  # total number of tokens in the data (5871)
+  term.frequency <- as.integer(term.table)  # frequencies of terms in the corpus [8939, 5544, 2411, 2410, 2143, ...]
+  
+  
+  # MCMC and model tuning parameters:
+  K <- 20 #number of topics
+  G <- 5000 #number of iterations
+  alpha <- 0.02
+  eta <- 0.02
+  
+  # Fit the model:
+  set.seed(357)
+  fit <- lda.collapsed.gibbs.sampler(documents = documents, K = K, vocab = vocab, 
+                                     num.iterations = G, alpha = alpha, 
+                                     eta = eta, initial = NULL, burnin = 0,
+                                     compute.log.likelihood = TRUE)
+  
+  theta <- t(apply(fit$document_sums + alpha, 2, function(x) x/sum(x)))
+  phi <- t(apply(t(fit$topics) + eta, 2, function(x) x/sum(x)))
+  
+  QuestionFeedback <- list(phi = phi,
+                           theta = theta,
+                           doc.length = doc.length,
+                           vocab = vocab,
+                           term.frequency = term.frequency)
+  
+  json <- createJSON(phi = QuestionFeedback$phi, 
+                     theta = QuestionFeedback$theta, 
+                     doc.length = QuestionFeedback$doc.length, 
+                     vocab = QuestionFeedback$vocab, 
+                     term.frequency = QuestionFeedback$term.frequency)
+  
+  
+  serVis(json, out.dir = output.dir, open.browser = FALSE)
 }
