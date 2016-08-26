@@ -837,7 +837,7 @@ get.terms <- function(x, vocab) {
 }
 
 
-perform.lda <- function(question_header){
+perform.lda <- function(question_header, K = 10){
   question <- dataset[, names(dataset)==question_header]
   handle <- substr(question_header, 1, 6)
   question <- question[!is.na(question)]
@@ -907,7 +907,7 @@ perform.lda <- function(question_header){
   
   
   # MCMC and model tuning parameters:
-  K <- 20 #number of topics
+  K <- K #number of topics
   G <- 5000 #number of iterations
   alpha <- 0.02
   eta <- 0.02
