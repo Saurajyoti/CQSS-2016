@@ -23,6 +23,15 @@ dataset$B.2.2.a.If.you.feel.comfortable.describe.any.inappropriate.conduct.or.se
 likert_levels <- c("Very unsatisfied", "Somewhat unsatisfied", "Somewhat satisfied", "Very satisfied")
 agree_levels <- c("Strongly disagree", "Somewhat_disagree", "Somewhat agree", "Strongly agree")
 skill_levels <- c("Very poor", "Poor", "Fair", "Good", "Very good", "Excellent")
+skill_variables <- c("Analytical.and.critical.thinking.skills",
+               "Ability.to.be.clear.and.effective.when.writing",
+               "Ability.to.read.and.comprehend.academic.material",
+               "Foreign.language.skills",
+               "Understanding.your.field.of.study",
+               "Quantitative..mathematical.and.statistical..skills",
+               "Ability.to.understand.international.perspectives..economic..political..social..cultural.",
+               "Leadership.skills")
+
 
 ### questions that need to be printed out
 questions <- c('B.1.1', 'B.2.1', 'B.2.2', 'C.1', #overall program satisfaction
@@ -108,7 +117,7 @@ questionprint_grouping <- function(x, dataset = overall, grouping, grouping_leve
   
   plot(questionl) +
 #    ggtitle(name_of_the_question) +
-    theme(text = element_text(size = 12, family = "Liberation Sans"),
+    theme(text = element_text(size = 12, family = "Times New Roman"),
           plot.title = element_text(size = 14))
 }
 
@@ -537,17 +546,24 @@ plot_question <- function(question, name_of_the_question){
             legend.position = "top",
             group.order = sort(names(question))) + 
     ggtitle(name_of_the_question) + # title of the question
-    theme(text = element_text(size = 10), # setting the text size of the plot
+    theme(text = element_text(size = 10, family = "Times New Roman"), # setting the text size of the plot
           plot.margin = unit(c(0.3, 0.8, 0.3, 0), "lines"), # decreasing white space around the plot
-          legend.margin = unit(0, "lines"), # deleting space around legend
+          legend.spacing = unit(0, "lines"), # deleting space around legend
           legend.key.size = unit(0.5, "lines"), # decreasing size of legend elements
           legend.background = element_rect(colour = "gray", fill = NA, size = 0.1), # adding a frame around the legend
           axis.title.x=element_blank(), #deleting x-label 
-          plot.title = element_text(size = 10)) + #size of the text in the title
+          plot.title = element_text(size = 10, hjust = 0.5)) + #size of the text in the title
     geom_hline(yintercept=seq(25, 75, by=25), linetype = "dashed", size = 0.2) + # adding dashed lines at 25, 50, 75% to make it more clear
     coord_fixed() +
     coord_flip(ylim = c(3,97)) #reducing white space left to 0 and right to 100
   return(p)
+}
+
+plot_difference <- function(df, var1, var2){
+  diff <- df[,var2] - df[,var1]
+  ggplot(diff, aes(x = diff)) +
+    geom_bar() + 
+    scale_x_discrete(breaks = c(-5:5))
 }
 
 prepare_university <- function(x, course_dataset){
@@ -936,4 +952,46 @@ perform.lda <- function(question_header, K = 10){
   
   
   serVis(json, out.dir = output.dir, open.browser = FALSE)
+}
+
+extract_diff <- function(df, skill_name){
+  temp <- df %>%
+    filter(str_detect(pattern = skill_name, string = variable)) %>%
+    reshape2::dcast(RespondentID ~ variable)
+  diff <- as.data.frame(temp[,3] - temp[,2])
+  names(diff) <- eval(skill_name)
+  return(diff)
+}
+
+plot_skill_diff <- function(df){
+  z <- df %>%
+    select(RespondentID,
+           starts_with("C.4.1"),
+           starts_with("C.4.2")) %>%
+    reshape2::melt(id.vars = "RespondentID") %>%
+    mutate(value = as.numeric(factor(value, levels = skill_levels)),
+           variable = gsub(replacement = "", x = variable, pattern = "Please.rate.your.level.of.proficiency.in.the.following.areas.when.you.started.the.programme_")) %>%
+    mutate(variable = gsub(replacement = "", x = variable, pattern = "Please.rate.your.level.of.proficiency.in.the.following.areas.now_")) 
+
+  temp <- lapply(skill_variables, function(x) extract_diff(z, x)) %>% 
+    do.call(cbind.data.frame, .) %>% 
+    melt() %>%
+    mutate(bin = cut(value, breaks = c(-6:5), include.lowest = FALSE, right = TRUE)) %>%
+    mutate(variable = gsub(replacement = " ", pattern = "\\.", variable)) 
+  
+  wrap_function_label <- wrap_format(40)
+  
+  ggplot(temp, aes(x = bin, y = as.factor(variable))) + 
+    geom_bin2d() +
+    stat_bin2d(geom = "text", aes(label = ..count..)) +
+    scale_fill_distiller(palette = "Greens", direction = 1) +
+    scale_x_discrete(breaks = levels(temp$bin), labels = c(-5:5), drop = FALSE) +
+    scale_y_discrete(labels = function(x) wrap_function_label(x)) +
+    theme(text = element_text(size = 10, family = "Times New Roman"), # setting the text size of the plot
+          plot.margin = unit(c(0.3, 0.8, 0.3, 0), "lines"), # decreasing white space around the plot
+          legend.spacing = unit(0, "lines"), # deleting space around legend
+          legend.background = element_rect(colour = "gray", fill = NA, size = 0.1), # adding a frame around the legend
+          axis.title.y=element_blank(), #deleting x-label 
+          plot.title = element_text(size = 10, hjust = 0.5)) + #size of the text in the title
+    ggtitle("Distribution of differences for skills")
 }
