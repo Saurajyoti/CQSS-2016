@@ -983,7 +983,7 @@ plot_skill_diff <- function(df){
   
   ggplot(temp, aes(x = bin, y = as.factor(variable))) + 
     geom_bin2d() +
-    stat_bin2d(geom = "text", aes(label = ..count..)) +
+    stat_bin2d(geom = "text", aes(label = ..count..), size = 3, family = "Times New Roman") +
     scale_fill_distiller(palette = "Greens", direction = 1) +
     scale_x_discrete(breaks = levels(temp$bin), labels = c(-5:5), drop = FALSE) +
     scale_y_discrete(labels = function(x) wrap_function_label(x)) +
