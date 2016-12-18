@@ -982,9 +982,9 @@ plot_skill_diff <- function(df){
   wrap_function_label <- wrap_format(40)
   
   ggplot(temp, aes(x = bin, y = as.factor(variable))) + 
-    geom_bin2d() +
-    stat_bin2d(geom = "text", aes(label = ..count..), size = 3, family = "Times New Roman") +
-    scale_fill_distiller(palette = "Greens", direction = 1) +
+    geom_bin2d(colour = "gray50") +
+    stat_bin2d(geom = "text", aes(label = ..count..), size = 2, family = "Times New Roman") +
+    scale_fill_gradient(low = "antiquewhite", high = "#5AB4AC") +
     scale_x_discrete(breaks = levels(temp$bin), labels = c(-5:5), drop = FALSE) +
     scale_y_discrete(labels = function(x) wrap_function_label(x)) +
     theme(text = element_text(size = 10, family = "Times New Roman"), # setting the text size of the plot
@@ -992,6 +992,10 @@ plot_skill_diff <- function(df){
           legend.spacing = unit(0, "lines"), # deleting space around legend
           legend.background = element_rect(colour = "gray", fill = NA, size = 0.1), # adding a frame around the legend
           axis.title.y=element_blank(), #deleting x-label 
-          plot.title = element_text(size = 10, hjust = 0.5)) + #size of the text in the title
+          axis.title.x=element_blank(),
+          plot.title = element_text(size = 10, hjust = 0.5),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank()) +
+    guides(fill = FALSE) +
     ggtitle("Distribution of differences for skills")
 }
